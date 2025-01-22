@@ -41,6 +41,7 @@ duckdb_conn.execute("DROP TABLE IF EXISTS query1")
 duckdb_conn.execute("DROP TABLE IF EXISTS query2")
 duckdb_conn.execute("DROP TABLE IF EXISTS query3")
 duckdb_conn.execute("DROP TABLE IF EXISTS query4")
+duckdb_conn.execute("DROP TABLE IF EXISTS query5")
 
 # creating sample data
 duckdb_conn.execute("CREATE TABLE sample AS SELECT * FROM main USING SAMPLE 500;")
@@ -66,39 +67,69 @@ duckdb_conn.execute("""
 
 # query 2
 duckdb_conn.execute("""
+CREATE TABLE query2 AS
+SELECT 
+   CASE 
+       WHEN totalTravelDistance < 500 THEN 'Short (<500 miles)'
+       WHEN totalTravelDistance < 1000 THEN 'Medium (500-1000 miles)'
+       ELSE 'Long (>1000 miles)'
+   END as distance_category,
+   ROUND(AVG(CASE WHEN isNonStop THEN totalFare END), 2) as direct_avg_fare,
+   ROUND(AVG(CASE WHEN NOT isNonStop THEN totalFare END), 2) as connection_avg_fare,
+   COUNT(CASE WHEN isNonStop THEN 1 END) as direct_flights_count,
+   COUNT(CASE WHEN NOT isNonStop THEN 1 END) as connection_flights_count
+FROM main
+WHERE totalTravelDistance IS NOT NULL
+GROUP BY 1
+ORDER BY distance_category;
+""")
+
+'''
+# query 2
+duckdb_conn.execute("""
     CREATE TABLE query2 AS
     WITH flight_categories AS (
-        SELECT *,
-               CASE 
-                   WHEN totalTravelDistance <= 500 THEN 1
-                   WHEN totalTravelDistance <= 1000 THEN 2
-                   WHEN totalTravelDistance <= 1500 THEN 3
-                   WHEN totalTravelDistance <= 2000 THEN 4
-                   ELSE 5
-               END as distance_category
+        SELECT 
+            CASE 
+                WHEN totalTravelDistance < 500 THEN 'Short (<500 miles)'
+                WHEN totalTravelDistance < 1000 THEN 'Medium (500-1000 miles)'
+                ELSE 'Long (>1000 miles)'
+            END as distance_category,
+            isNonStop,
+            AVG(totalFare) as avg_fare,
+            COUNT(*) as num_flights
         FROM main
         WHERE totalTravelDistance IS NOT NULL
+        GROUP BY 
+            CASE 
+                WHEN totalTravelDistance < 500 THEN 'Short (<500 miles)'
+                WHEN totalTravelDistance < 1000 THEN 'Medium (500-1000 miles)'
+                ELSE 'Long (>1000 miles)'
+            END,
+            isNonStop
     )
     SELECT 
-        CASE distance_category
-            WHEN 1 THEN 'Short (0-500 miles)'
-            WHEN 2 THEN 'Medium (501-1000 miles)'
-            WHEN 3 THEN 'Long (1001-1500 miles)'
-            WHEN 4 THEN 'Very Long (1501-2000 miles)'
-            ELSE 'Ultra Long (2000+ miles)'
-        END as flight_distance,
-        isNonStop,
-        ROUND(AVG(totalFare), 2) as avg_fare,
-        ROUND(AVG(travelDuration), 0) as avg_duration_minutes,
-        COUNT(*) as number_of_flights
+        distance_category,
+        ROUND(AVG(CASE WHEN isNonStop THEN avg_fare END), 2) as direct_avg_fare,
+        ROUND(AVG(CASE WHEN NOT isNonStop THEN avg_fare END), 2) as connection_avg_fare,
+        ROUND(AVG(CASE WHEN isNonStop THEN avg_fare END) - 
+              AVG(CASE WHEN NOT isNonStop THEN avg_fare END), 2) as price_difference,
+        SUM(CASE WHEN isNonStop THEN num_flights END) as direct_flights_count,
+        SUM(CASE WHEN NOT isNonStop THEN num_flights END) as connection_flights_count
     FROM flight_categories
-    GROUP BY distance_category, isNonStop
-    ORDER BY distance_category, isNonStop
+    GROUP BY distance_category
+    ORDER BY 
+        CASE distance_category
+            WHEN 'Short (<500 miles)' THEN 1
+            WHEN 'Medium (500-1000 miles)' THEN 2
+            ELSE 3
+        END;
 """)
+'''
 
 # query 3
 duckdb_conn.execute("""
-    CREATE TABLE query2 AS
+    CREATE TABLE query3 AS
     WITH flight_times AS (
         SELECT *,
                CAST(SUBSTR(segmentsDepartureTimeRaw, 12, 2) AS INTEGER) as departure_hour
@@ -118,6 +149,7 @@ duckdb_conn.execute("""
     ORDER BY departure_hour
 """)
 
+''' 
 # query 4
 duckdb_conn.execute("""
     CREATE TABLE query4 AS
@@ -138,6 +170,35 @@ duckdb_conn.execute("""
     GROUP BY flight_day
     ORDER BY EXTRACT(DOW FROM DATE_TRUNC('day', MIN(flightDate)))
 """)
+'''
+
+duckdb_conn.execute("""
+   CREATE TABLE query4 AS
+   WITH day_info AS (
+       SELECT 
+           totalFare,
+           STRFTIME(flightDate::DATE, '%A') as flight_day,
+           isNonStop
+       FROM main
+   )
+   SELECT 
+       flight_day,
+       ROUND(AVG(totalFare), 2) as avg_fare,
+       ROUND(AVG(CASE WHEN isNonStop THEN totalFare END), 2) as avg_nonstop_fare,
+       ROUND(AVG(CASE WHEN NOT isNonStop THEN totalFare END), 2) as avg_connection_fare,
+       COUNT(*) as number_of_flights
+   FROM day_info
+   GROUP BY flight_day
+   ORDER BY CASE flight_day
+       WHEN 'Sunday' THEN 0
+       WHEN 'Monday' THEN 1 
+       WHEN 'Tuesday' THEN 2
+       WHEN 'Wednesday' THEN 3
+       WHEN 'Thursday' THEN 4
+       WHEN 'Friday' THEN 5
+       WHEN 'Saturday' THEN 6
+   END
+""")
 
 # query 5
 duckdb_conn.execute("""
@@ -152,7 +213,7 @@ duckdb_conn.execute("""
                 PARTITION BY startingAirport, destinationAirport
                 ORDER BY flightDate
             ) as prev_day_fare
-        FROM flights
+        FROM main
         GROUP BY startingAirport, destinationAirport, flightDate
     )
     SELECT 
