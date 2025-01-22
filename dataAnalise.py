@@ -1,7 +1,5 @@
 import csv
 import os
-
-
 import duckdb
 from pandas.io.common import file_exists
 
@@ -41,6 +39,7 @@ duckdb_conn.execute("DROP TABLE IF EXISTS query1")
 duckdb_conn.execute("DROP TABLE IF EXISTS query2")
 duckdb_conn.execute("DROP TABLE IF EXISTS query3")
 duckdb_conn.execute("DROP TABLE IF EXISTS query4")
+duckdb_conn.execute("DROP TABLE IF EXISTS query5")
 
 # creating sample data
 duckdb_conn.execute("CREATE TABLE sample AS SELECT * FROM main USING SAMPLE 500;")
@@ -63,8 +62,10 @@ duckdb_conn.execute("""
     GROUP BY days_until_flight
     ORDER BY days_until_flight
 """)
+print("query 1 finished")
 
 # query 2
+'''
 duckdb_conn.execute("""
     CREATE TABLE query2 AS
     WITH flight_categories AS (
@@ -95,10 +96,12 @@ duckdb_conn.execute("""
     GROUP BY distance_category, isNonStop
     ORDER BY distance_category, isNonStop
 """)
+'''
+print("query 2 finished")
 
 # query 3
 duckdb_conn.execute("""
-    CREATE TABLE query2 AS
+    CREATE TABLE query3 AS
     WITH flight_times AS (
         SELECT *,
                CAST(SUBSTR(segmentsDepartureTimeRaw, 12, 2) AS INTEGER) as departure_hour
@@ -117,7 +120,9 @@ duckdb_conn.execute("""
     GROUP BY departure_hour
     ORDER BY departure_hour
 """)
+print("query 3 finished")
 
+'''
 # query 4
 duckdb_conn.execute("""
     CREATE TABLE query4 AS
@@ -138,6 +143,8 @@ duckdb_conn.execute("""
     GROUP BY flight_day
     ORDER BY EXTRACT(DOW FROM DATE_TRUNC('day', MIN(flightDate)))
 """)
+'''
+print("query 4 finished")
 
 # query 5
 duckdb_conn.execute("""
@@ -152,7 +159,7 @@ duckdb_conn.execute("""
                 PARTITION BY startingAirport, destinationAirport
                 ORDER BY flightDate
             ) as prev_day_fare
-        FROM flights
+        FROM main
         GROUP BY startingAirport, destinationAirport, flightDate
     )
     SELECT 
@@ -166,6 +173,25 @@ duckdb_conn.execute("""
     WHERE ((avg_fare - prev_day_fare) / prev_day_fare * 100) > 20
     ORDER BY daily_change_percent DESC;
 """)
+print("query 5 finished")
 
+try:
+    os.remove("database.sqlite")
+    print("old sqlite file deleted")
+except:
+    print("cannot delete old sqlite file")
+
+duckdb_conn.execute("INSTALL sqlite;")
+duckdb_conn.execute("LOAD sqlite;")
+duckdb_conn.execute("ATTACH 'database.sqlite' AS sqliteDB (TYPE SQLITE);")
+
+duckdb_conn.execute("CREATE TABLE sqliteDB.sample AS SELECT * FROM sample")
+duckdb_conn.execute("CREATE TABLE sqliteDB.query1 AS SELECT * FROM query1")
+#duckdb_conn.execute("CREATE TABLE sqliteDB.query2 AS SELECT * FROM query2")
+duckdb_conn.execute("CREATE TABLE sqliteDB.query3 AS SELECT * FROM query3")
+#duckdb_conn.execute("CREATE TABLE sqliteDB.query4 AS SELECT * FROM query4")
+duckdb_conn.execute("CREATE TABLE sqliteDB.query5 AS SELECT * FROM query5")
+
+#duckdb_conn.execute("EXPORT DATABASE 'sqliteDB' (FORMAT SQLITE);")
 
 duckdb_conn.close()
