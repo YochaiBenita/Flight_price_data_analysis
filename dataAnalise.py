@@ -243,9 +243,9 @@ duckdb_conn.execute("ATTACH 'database.sqlite' AS sqliteDB (TYPE SQLITE);")
 
 duckdb_conn.execute("CREATE TABLE sqliteDB.sample AS SELECT * FROM sample")
 duckdb_conn.execute("CREATE TABLE sqliteDB.query1 AS SELECT * FROM query1")
-#duckdb_conn.execute("CREATE TABLE sqliteDB.query2 AS SELECT * FROM query2")
+duckdb_conn.execute("CREATE TABLE sqliteDB.query2 AS SELECT * FROM query2")
 duckdb_conn.execute("CREATE TABLE sqliteDB.query3 AS SELECT * FROM query3")
-#duckdb_conn.execute("CREATE TABLE sqliteDB.query4 AS SELECT * FROM query4")
+duckdb_conn.execute("CREATE TABLE sqliteDB.query4 AS SELECT * FROM query4")
 duckdb_conn.execute("CREATE TABLE sqliteDB.query5 AS SELECT * FROM query5")
 
 #duckdb_conn.execute("EXPORT DATABASE 'sqliteDB' (FORMAT SQLITE);")
