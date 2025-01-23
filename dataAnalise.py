@@ -242,11 +242,10 @@ duckdb_conn.execute("LOAD sqlite;")
 duckdb_conn.execute("ATTACH 'database.sqlite' AS sqliteDB (TYPE SQLITE);")
 
 duckdb_conn.execute("CREATE TABLE sqliteDB.sample AS SELECT * FROM sample")
-duckdb_conn.execute("CREATE TABLE sqliteDB.query1 AS SELECT * FROM query1")
-duckdb_conn.execute("CREATE TABLE sqliteDB.query2 AS SELECT * FROM query2")
-duckdb_conn.execute("CREATE TABLE sqliteDB.query3 AS SELECT * FROM query3")
-duckdb_conn.execute("CREATE TABLE sqliteDB.query4 AS SELECT * FROM query4")
-duckdb_conn.execute("CREATE TABLE sqliteDB.query5 AS SELECT * FROM query5")
+print("Table 'sample' copied successfully")
+for i in range (1,6):
+    duckdb_conn.execute(f"CREATE TABLE sqliteDB.query{i} AS SELECT * FROM query{i}")
+    print(f"Table 'query{i}' copied successfully")
 
 #duckdb_conn.execute("EXPORT DATABASE 'sqliteDB' (FORMAT SQLITE);")
 
