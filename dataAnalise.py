@@ -177,10 +177,10 @@ duckdb_conn.execute("ATTACH 'database.sqlite' AS sqliteDB (TYPE SQLITE);")
 
 duckdb_conn.execute("CREATE TABLE sqliteDB.sample AS SELECT * FROM sample")
 print("Table 'sample' copied successfully")
-for i in range (1,6):
+for i in range(1, 6):
     duckdb_conn.execute(f"CREATE TABLE sqliteDB.query{i} AS SELECT * FROM query{i}")
     print(f"Table 'query{i}' copied successfully")
 
-#duckdb_conn.execute("EXPORT DATABASE 'sqliteDB' (FORMAT SQLITE);")
+# duckdb_conn.execute("EXPORT DATABASE 'sqliteDB' (FORMAT SQLITE);")
 
 duckdb_conn.close()
