@@ -161,6 +161,7 @@ duckdb_conn.execute("""
         ((avg_fare - prev_day_fare) / prev_day_fare * 100) as daily_change_percent
     FROM price_volatility
     WHERE ((avg_fare - prev_day_fare) / prev_day_fare * 100) > 20
+        OR ((avg_fare - prev_day_fare) / prev_day_fare * 100) < -20
     ORDER BY daily_change_percent DESC;
 """)
 print("query 5 finished")
