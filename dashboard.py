@@ -5,6 +5,7 @@ from pygments import highlight
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+
 sqlite_conn = sqlite3.connect("database.sqlite")
 
 # st.write("# Hi")
@@ -160,7 +161,7 @@ def data_sample():
         st.error(f"An error occurred while connecting to the database: {e}")
 
 
-def frist_query():
+def first_query():
     st.title("✈️ Flight Price and Search Analysis Dashboard")
 
     conn = sqlite3.connect("database.sqlite")
@@ -192,6 +193,87 @@ def frist_query():
     st.pyplot(fig2)
 
     # _________________________________________________________________________________________________________
+
+
+def second_query():
+    st.subheader("✈️ Flight Analysis by Distance Category")
+
+    conn = sqlite3.connect("database.sqlite")
+    query = "SELECT * FROM query2"
+    query2_data = pd.read_sql_query(query, conn)
+    conn.close()
+
+    st.sidebar.subheader("🔍 Filters")
+    show_direct = st.sidebar.checkbox('Show Direct Flights', value=True)
+    show_connection = st.sidebar.checkbox('Show Connection Flights', value=True)
+
+    st.subheader("🎟️ Average Fares by Distance Category")
+
+    # Display color legend
+    legend_col1, legend_col2 = st.columns(2)
+    with legend_col1:
+        st.markdown('<span style="color: skyblue;">■</span> Direct Flights', unsafe_allow_html=True)
+    with legend_col2:
+        st.markdown('<span style="color: lightcoral;">■</span> Connection Flights', unsafe_allow_html=True)
+
+    plot_data = pd.melt(query2_data,
+                        id_vars=['distance_category'],
+                        value_vars=['direct_avg_fare', 'connection_avg_fare'],
+                        var_name='flight_type',
+                        value_name='average_fare')
+
+    selected_types = []
+    if show_direct:
+        selected_types.append('direct_avg_fare')
+    if show_connection:
+        selected_types.append('connection_avg_fare')
+
+    filtered_data = plot_data[plot_data['flight_type'].isin(selected_types)]
+
+    fig1, ax1 = plt.subplots(figsize=(10, 6))
+
+    if len(filtered_data) > 0:
+        bars = sns.barplot(data=filtered_data,
+                           x='distance_category',
+                           y='average_fare',
+                           hue='flight_type',
+                           palette={'direct_avg_fare': 'skyblue', 'connection_avg_fare': 'lightcoral'},
+                           ax=ax1)
+
+        ax1.set_title('Average Fares by Distance Category')
+        ax1.set_xlabel('Distance Category')
+        ax1.set_ylabel('Average Fare (USD)')
+        ax1.tick_params(axis='x', rotation=45)
+
+        handles = ax1.get_legend().get_texts()
+        labels = ['Direct Flights' if txt.get_text() == 'direct_avg_fare'
+                  else 'Connection Flights' for txt in handles]
+        ax1.legend(labels=labels)
+
+        plt.tight_layout()
+
+        for p in ax1.patches:
+            ax1.annotate(f'${p.get_height():.2f}',
+                         (p.get_x() + p.get_width() / 2., p.get_height()),
+                         ha='center', va='bottom')
+
+    st.pyplot(fig1)
+
+    if show_direct or show_connection:
+        st.subheader("📈 Key Insights")
+        col1, col2 = st.columns(2)
+
+        if show_direct:
+            with col1:
+                st.write("Direct Flights:")
+                st.write(f"- Highest average fare: ${query2_data['direct_avg_fare'].max():.2f}")
+                st.write(f"- Total number of flights: {query2_data['direct_flights_count'].sum():,}")
+
+        if show_connection:
+            with col2:
+                st.write("Connection Flights:")
+                st.write(f"- Highest average fare: ${query2_data['connection_avg_fare'].max():.2f}")
+                st.write(f"- Total number of flights: {query2_data['connection_flights_count'].sum():,}")
 
 
 def mapping_demo():
@@ -388,7 +470,8 @@ def data_frame_demo():
 page_names_to_funcs = {
     "main page": mainPage,
     "data sample": data_sample,
-    "first query": frist_query,
+    "first query": first_query,
+    "second query": second_query,
     "Plotting Demo": plotting_demo,
     "Mapping Demo": mapping_demo,
     "DataFrame Demo": data_frame_demo,
