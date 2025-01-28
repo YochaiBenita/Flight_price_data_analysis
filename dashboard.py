@@ -160,7 +160,7 @@ def data_sample():
     except sqlite3.Error as e:
         st.error(f"An error occurred while connecting to the database: {e}")
 
-
+#seaborn and matplot
 def first_query():
     st.title("✈️ Flight Price and Search Analysis Dashboard")
 
@@ -193,8 +193,7 @@ def first_query():
     st.pyplot(fig2)
 
     # _________________________________________________________________________________________________________
-
-
+#seaborn and matplot
 def second_query():
     st.subheader("✈️ Flight Analysis by Distance Category")
 
@@ -208,13 +207,6 @@ def second_query():
     show_connection = st.sidebar.checkbox('Show Connection Flights', value=True)
 
     st.subheader("🎟️ Average Fares by Distance Category")
-
-    # Display color legend
-    legend_col1, legend_col2 = st.columns(2)
-    with legend_col1:
-        st.markdown('<span style="color: skyblue;">■</span> Direct Flights', unsafe_allow_html=True)
-    with legend_col2:
-        st.markdown('<span style="color: lightcoral;">■</span> Connection Flights', unsafe_allow_html=True)
 
     plot_data = pd.melt(query2_data,
                         id_vars=['distance_category'],
@@ -245,10 +237,12 @@ def second_query():
         ax1.set_ylabel('Average Fare (USD)')
         ax1.tick_params(axis='x', rotation=45)
 
-        handles = ax1.get_legend().get_texts()
-        labels = ['Direct Flights' if txt.get_text() == 'direct_avg_fare'
-                  else 'Connection Flights' for txt in handles]
-        ax1.legend(labels=labels)
+        legend_handles = [plt.Rectangle((0, 0), 1, 1, color='skyblue'),
+                          plt.Rectangle((0, 0), 1, 1, color='lightcoral')]
+        labels = ['Direct Flights', 'Connection Flights']
+
+        ax1.get_legend().remove()
+        ax1.legend(handles=legend_handles, labels=labels, loc='upper right', bbox_to_anchor=(1, 1))
 
         plt.tight_layout()
 
@@ -274,7 +268,219 @@ def second_query():
                 st.write("Connection Flights:")
                 st.write(f"- Highest average fare: ${query2_data['connection_avg_fare'].max():.2f}")
                 st.write(f"- Total number of flights: {query2_data['connection_flights_count'].sum():,}")
+#matplot
+def third_query():
+    st.subheader("🕒 Flight Analysis by Departure Hour")
 
+    conn = sqlite3.connect("database.sqlite")
+    query = "SELECT * FROM query3"
+    query3_data = pd.read_sql_query(query, conn)
+    conn.close()
+
+    st.sidebar.subheader("📊 Select Metrics")
+    show_avg_fare = st.sidebar.checkbox('Average Fare', value=True)
+    show_seats = st.sidebar.checkbox('Average Seats Remaining', value=True)
+    show_flights = st.sidebar.checkbox('Number of Flights', value=True)
+
+    st.subheader("📈 Hourly Flight Metrics")
+
+    fig1, ax1 = plt.subplots(figsize=(12, 6))
+
+    if show_avg_fare:
+        ax1.plot(query3_data['departure_hour'], query3_data['avg_fare'],
+                 marker='o', color='skyblue', label='Average Fare ($)')
+        ax1.set_ylabel('Average Fare (USD)', color='skyblue')
+
+    if show_seats:
+        if not show_avg_fare:
+            ax1.set_ylabel('Average Seats Remaining', color='lightcoral')
+        ax2 = ax1.twinx()
+        ax2.plot(query3_data['departure_hour'], query3_data['avg_seats_remaining'],
+                 marker='s', color='lightcoral', label='Avg Seats Remaining')
+        ax2.set_ylabel('Average Seats Remaining', color='lightcoral')
+
+    if show_flights:
+        if not show_avg_fare and not show_seats:
+            ax1.set_ylabel('Number of Flights', color='green')
+        ax3 = ax1.twinx()
+        ax3.spines['right'].set_position(('outward', 60))
+        ax3.plot(query3_data['departure_hour'], query3_data['number_of_flights'],
+                 marker='^', color='green', label='Number of Flights')
+        ax3.set_ylabel('Number of Flights', color='green')
+
+    ax1.set_xlabel('Departure Hour')
+    ax1.set_title('Flight Metrics by Departure Hour')
+    ax1.grid(True, alpha=0.3)
+    ax1.set_xticks(query3_data['departure_hour'])
+
+    lines = []
+    labels = []
+    if show_avg_fare:
+        lines.append(plt.Line2D([0], [0], color='skyblue', marker='o', label='Average Fare ($)'))
+        labels.append('Average Fare ($)')
+    if show_seats:
+        lines.append(plt.Line2D([0], [0], color='lightcoral', marker='s', label='Avg Seats Remaining'))
+        labels.append('Avg Seats Remaining')
+    if show_flights:
+        lines.append(plt.Line2D([0], [0], color='green', marker='^', label='Number of Flights'))
+        labels.append('Number of Flights')
+
+    plt.legend(handles=lines, labels=labels, loc='upper right', bbox_to_anchor=(1, 1))
+    plt.tight_layout()
+
+    st.pyplot(fig1)
+
+    if any([show_avg_fare, show_seats, show_flights]):
+        st.subheader("📊 Key Statistics")
+        col1, col2, col3 = st.columns(3)
+
+        if show_avg_fare:
+            with col1:
+                st.write("Average Fare:")
+                st.write(f"- Peak: ${query3_data['avg_fare'].max():.2f}")
+                st.write(f"- Low: ${query3_data['avg_fare'].min():.2f}")
+
+        if show_seats:
+            with col2:
+                st.write("Seats Remaining:")
+                st.write(f"- Highest avg: {query3_data['avg_seats_remaining'].max():.1f}")
+                st.write(f"- Lowest avg: {query3_data['avg_seats_remaining'].min():.1f}")
+
+        if show_flights:
+            with col3:
+                st.write("Flight Volume:")
+                st.write(f"- Peak: {query3_data['number_of_flights'].max():,} flights")
+                st.write(f"- Low: {query3_data['number_of_flights'].min():,} flights")
+#matplot
+def fourth_query():
+    st.subheader("📅 Flight Analysis by Day of Week")
+
+    conn = sqlite3.connect("database.sqlite")
+    query = "SELECT * FROM query4"
+    query4_data = pd.read_sql_query(query, conn)
+    conn.close()
+
+    st.sidebar.subheader("🔍 Select Fare Types")
+    show_avg = st.sidebar.checkbox('Average Fare', value=True)
+    show_nonstop = st.sidebar.checkbox('Non-Stop Fare', value=True)
+    show_connection = st.sidebar.checkbox('Connection Fare', value=True)
+
+    st.subheader("💰 Fares by Day of Week")
+
+    fig1, ax1 = plt.subplots(figsize=(12, 6))
+
+    x = range(len(query4_data['flight_day']))
+
+    if show_avg:
+        ax1.plot(x, query4_data['avg_fare'], marker='o', color='skyblue', label='Average Fare')
+
+    if show_nonstop:
+        ax1.plot(x, query4_data['avg_nonstop_fare'], marker='s', color='lightcoral', label='Non-Stop Fare')
+
+    if show_connection:
+        ax1.plot(x, query4_data['avg_connection_fare'], marker='^', color='green', label='Connection Fare')
+
+    ax1.set_xlabel('Day of Week')
+    ax1.set_ylabel('Fare (USD)')
+    ax1.set_title('Flight Fares by Day of Week')
+    ax1.grid(True, alpha=0.3)
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(query4_data['flight_day'], rotation=45)
+
+    if show_avg or show_nonstop or show_connection:
+        ax1.legend(loc='upper right', bbox_to_anchor=(1, 1))
+
+    for line in ax1.lines:
+        for x_val, y_val in zip(x, line.get_ydata()):
+            ax1.annotate(f'${y_val:.2f}',
+                         (x_val, y_val),
+                         textcoords="offset points",
+                         xytext=(0, 10),
+                         ha='center')
+
+    plt.tight_layout()
+    st.pyplot(fig1)
+
+    if show_avg or show_nonstop or show_connection:
+        st.subheader("📊 Summary Statistics")
+        col1, col2, col3 = st.columns(3)
+
+        if show_avg:
+            with col1:
+                st.write("Average Fare:")
+                st.write(f"- Highest: ${query4_data['avg_fare'].max():.2f}")
+                st.write(f"- Lowest: ${query4_data['avg_fare'].min():.2f}")
+
+        if show_nonstop:
+            with col2:
+                st.write("Non-Stop Fare:")
+                st.write(f"- Highest: ${query4_data['avg_nonstop_fare'].max():.2f}")
+                st.write(f"- Lowest: ${query4_data['avg_nonstop_fare'].min():.2f}")
+
+        if show_connection:
+            with col3:
+                st.write("Connection Fare:")
+                st.write(f"- Highest: ${query4_data['avg_connection_fare'].max():.2f}")
+                st.write(f"- Lowest: ${query4_data['avg_connection_fare'].min():.2f}")
+
+def fifth_query():
+    st.subheader("📊 Significant Price Changes Analysis")
+
+    conn = sqlite3.connect("database.sqlite")
+    query = "SELECT * FROM query5"
+    query5_data = pd.read_sql_query(query, conn)
+    conn.close()
+
+    fig1, ax1 = plt.subplots(figsize=(12, 6))
+
+    colors = ['red' if x > 0 else 'blue' for x in query5_data['daily_change_percent']]
+
+    scatter = ax1.scatter(range(len(query5_data)),
+                          query5_data['daily_change_percent'],
+                          c=colors,
+                          alpha=0.6)
+
+    ax1.axhline(y=0, color='black', linestyle='-', alpha=0.2)
+    ax1.axhline(y=20, color='red', linestyle='--', alpha=0.2)
+    ax1.axhline(y=-20, color='blue', linestyle='--', alpha=0.2)
+
+    ax1.set_ylabel('Price Change (%)')
+    ax1.set_title('Significant Daily Price Changes (>20%)')
+    ax1.grid(True, alpha=0.3)
+
+    legend_elements = [plt.Line2D([0], [0], marker='o', color='w',
+                                  markerfacecolor='red', label='Price Increase', markersize=10),
+                       plt.Line2D([0], [0], marker='o', color='w',
+                                  markerfacecolor='blue', label='Price Decrease', markersize=10)]
+
+    ax1.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1, 1))
+
+    plt.tight_layout()
+    st.pyplot(fig1)
+
+    st.subheader("🔍 Detailed Statistics")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.write("Price Increases:")
+        increases = query5_data[query5_data['daily_change_percent'] > 0]
+        st.write(f"- Count: {len(increases)}")
+        st.write(f"- Max Increase: {increases['daily_change_percent'].max():.1f}%")
+        st.write(f"- Avg Increase: {increases['daily_change_percent'].mean():.1f}%")
+
+    with col2:
+        st.write("Price Decreases:")
+        decreases = query5_data[query5_data['daily_change_percent'] < 0]
+        st.write(f"- Count: {len(decreases)}")
+        st.write(f"- Max Decrease: {decreases['daily_change_percent'].min():.1f}%")
+        st.write(f"- Avg Decrease: {decreases['daily_change_percent'].mean():.1f}%")
+
+    st.subheader("📈 Routes with Most Volatile Prices")
+    volatile_routes = query5_data.groupby(['startingAirport', 'destinationAirport']).size() \
+        .sort_values(ascending=False).head(5)
+
+    for (start, dest), count in volatile_routes.items():
+        st.write(f"- {start} ➡️ {dest}: {count} significant changes")
 
 def mapping_demo():
     import pandas as pd
@@ -472,6 +678,9 @@ page_names_to_funcs = {
     "data sample": data_sample,
     "first query": first_query,
     "second query": second_query,
+    "third query": third_query,
+    "fourth query": fourth_query,
+    "fifth query": fifth_query,
     "Plotting Demo": plotting_demo,
     "Mapping Demo": mapping_demo,
     "DataFrame Demo": data_frame_demo,
