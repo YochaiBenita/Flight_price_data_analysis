@@ -2,3 +2,5 @@ duckdb
 matplotlib
 streamlit
 seaborn
+folium
+streamlit_folium

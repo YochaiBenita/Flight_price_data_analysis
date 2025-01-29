@@ -4,6 +4,8 @@ import pandas as pd
 from pygments import highlight
 import matplotlib.pyplot as plt
 import seaborn as sns
+import folium
+from streamlit_folium import st_folium
 
 
 sqlite_conn = sqlite3.connect("database.sqlite")
@@ -157,6 +159,41 @@ def data_sample():
 
         - :blue-background[segmentsCabinCode]: String containing the cabin for each leg of the trip (e.g. "coach"). The entries for each of the legs are separated by '||'.
         """)
+        #-----------------------------------------------------------------------------------------
+        st.title('US Major Airports Visualization')
+
+        conn = sqlite3.connect("database.sqlite")
+        # Load the 'sample' table into a pandas DataFrame
+        query = "SELECT * FROM airportsLocation"
+        df = pd.read_sql_query(query, conn)
+        conn.close()
+
+        # Display the data table
+        st.subheader('Airports Data Table')
+        st.dataframe(df)
+
+        # Create map
+        st.subheader('Airports Map')
+
+        # Prepare data for the map
+        map_data = df[['lat', 'lon']]
+
+        # Display the map using st.map
+        st.map(map_data)
+
+        # Add some statistics
+        st.subheader('Quick Statistics')
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.metric("Total Airports", len(df))
+            st.metric("Northernmost Airport", df.loc[df['lat'].idxmax(), 'airport'])
+
+        with col2:
+            st.metric("Southernmost Airport", df.loc[df['lat'].idxmin(), 'airport'])
+            st.metric("Westernmost Airport", df.loc[df['lon'].idxmin(), 'airport'])
+        #-----------------------------------------------------------------------------------------
+
     except sqlite3.Error as e:
         st.error(f"An error occurred while connecting to the database: {e}")
 

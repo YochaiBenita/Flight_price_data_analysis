@@ -35,6 +35,7 @@ else:
 
 # remove old tables
 duckdb_conn.execute("DROP TABLE IF EXISTS sample")
+duckdb_conn.execute("DROP TABLE IF EXISTS airportsLocation")
 duckdb_conn.execute("DROP TABLE IF EXISTS query1")
 duckdb_conn.execute("DROP TABLE IF EXISTS query2")
 duckdb_conn.execute("DROP TABLE IF EXISTS query3")
@@ -43,6 +44,7 @@ duckdb_conn.execute("DROP TABLE IF EXISTS query5")
 
 # creating sample data
 duckdb_conn.execute("CREATE TABLE sample AS SELECT * FROM main USING SAMPLE 500;")
+duckdb_conn.execute("CREATE TABLE airportsLocation AS SELECT * FROM read_csv_auto('airportsLocation.csv')")
 
 # query 1
 duckdb_conn.execute("""
@@ -178,6 +180,8 @@ duckdb_conn.execute("ATTACH 'database.sqlite' AS sqliteDB (TYPE SQLITE);")
 
 duckdb_conn.execute("CREATE TABLE sqliteDB.sample AS SELECT * FROM sample")
 print("Table 'sample' copied successfully")
+duckdb_conn.execute("CREATE TABLE sqliteDB.airportsLocation AS SELECT * FROM airportsLocation")
+print("Table 'airportsLocation' copied successfully")
 for i in range(1, 6):
     duckdb_conn.execute(f"CREATE TABLE sqliteDB.query{i} AS SELECT * FROM query{i}")
     print(f"Table 'query{i}' copied successfully")
