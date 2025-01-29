@@ -137,35 +137,6 @@ duckdb_conn.execute("""
    END
 """)
 print("query 4 finished")
-'''
-duckdb_conn.execute("""
-    CREATE TABLE query5 AS
-    WITH price_volatility AS (
-        SELECT 
-            startingAirport,
-            destinationAirport,
-            flightDate,
-            AVG(totalFare) as avg_fare,
-            LAG(AVG(totalFare)) OVER (
-                PARTITION BY startingAirport, destinationAirport
-                ORDER BY flightDate
-            ) as prev_day_fare
-        FROM main
-        GROUP BY startingAirport, destinationAirport, flightDate
-    )
-    SELECT 
-        flightDate,
-        startingAirport,
-        destinationAirport,
-        avg_fare,
-        prev_day_fare,
-        ((avg_fare - prev_day_fare) / prev_day_fare * 100) as daily_change_percent
-    FROM price_volatility
-    WHERE ((avg_fare - prev_day_fare) / prev_day_fare * 100) > 20
-        OR ((avg_fare - prev_day_fare) / prev_day_fare * 100) < -20
-    ORDER BY daily_change_percent DESC;
-""")
-'''
 
 # query 5
 duckdb_conn.execute("""
@@ -189,24 +160,6 @@ duckdb_conn.execute("""
              a1.lat, a1.lon, a2.lat, a2.lon
     ORDER BY f.startingAirport, f.destinationAirport, f.isNonStop DESC;
 """)
-
-'''
-duckdb_conn.execute("""
-    CREATE TABLE query5 AS
-    SELECT 
-        startingAirport,
-        destinationAirport,
-        isNonStop,
-        COUNT(*) as num_flights,
-        ROUND(AVG(totalFare), 2) as avg_fare,
-        ROUND(MIN(totalFare), 2) as min_fare,
-        ROUND(MAX(totalFare), 2) as max_fare
-    FROM main
-    GROUP BY startingAirport, destinationAirport, isNonStop
-    ORDER BY startingAirport, destinationAirport, isNonStop DESC;
-""")
-'''
-
 print("query 5 finished")
 
 try:
@@ -232,3 +185,38 @@ for i in range(1, 6):
 duckdb_conn.close()
 
 
+'''
+def first_query():
+    st.title("✈️ Flight Price and Search Analysis Dashboard")
+
+    conn = sqlite3.connect("database.sqlite")
+    # Load the 'sample' table into a pandas DataFrame
+    query = "SELECT * FROM query1"
+    df = pd.read_sql_query(query, conn)
+    conn.close()
+
+    # Price vs Days Before Flight
+    st.subheader("🎟️ Ticket Price vs. Days Before Flight")
+    fig1, ax1 = plt.subplots(figsize=(10, 6))
+    sns.lineplot(data=df, x='days_before_flight', y='avg_fare', alpha=0.3, ax=ax1)
+    ax1.set_title('Ticket Price vs. Days Before Flight')
+    ax1.set_xlabel('Days Before Flight')
+    ax1.set_ylabel('Average Fare (USD)')
+    ax1.invert_xaxis()
+    st.pyplot(fig1)
+
+    # Searches Over Time
+    st.subheader("📊 Number of Searches Over Time")
+    # Aggregate searches per day
+    search_counts = df.groupby('days_before_flight')['number_of_searches'].sum().reset_index()
+    fig2, ax2 = plt.subplots(figsize=(10, 6))
+    sns.lineplot(data=search_counts, x='days_before_flight', y='number_of_searches', ax=ax2)
+    ax2.set_title('Number of Searches Over Time')
+    ax2.set_xlabel('Days Before Flight')
+    ax2.set_ylabel('Number of Searches')
+    ax2.invert_xaxis()
+    st.pyplot(fig2)
+
+    # _________________________________________________________________________________________________________
+
+'''
