@@ -135,8 +135,7 @@ duckdb_conn.execute("""
    END
 """)
 print("query 4 finished")
-
-# query 5
+'''
 duckdb_conn.execute("""
     CREATE TABLE query5 AS
     WITH price_volatility AS (
@@ -164,6 +163,48 @@ duckdb_conn.execute("""
         OR ((avg_fare - prev_day_fare) / prev_day_fare * 100) < -20
     ORDER BY daily_change_percent DESC;
 """)
+'''
+
+# query 5
+duckdb_conn.execute("""
+    CREATE TABLE query5 AS
+    SELECT 
+        f.startingAirport,
+        f.destinationAirport,
+        f.isNonStop,
+        COUNT(*) as num_flights,
+        ROUND(AVG(totalFare), 2) as avg_fare,
+        ROUND(MIN(totalFare), 2) as min_fare,
+        ROUND(MAX(totalFare), 2) as max_fare,
+        a1.lat as start_lat,
+        a1.lon as start_lon,
+        a2.lat as dest_lat,
+        a2.lon as dest_lon
+    FROM flights f
+    JOIN airportsLocation a1 ON f.startingAirport = a1.code
+    JOIN airportsLocation a2 ON f.destinationAirport = a2.code
+    GROUP BY f.startingAirport, f.destinationAirport, f.isNonStop, 
+             a1.lat, a1.lon, a2.lat, a2.lon
+    ORDER BY f.startingAirport, f.destinationAirport, f.isNonStop DESC;
+""")
+
+'''
+duckdb_conn.execute("""
+    CREATE TABLE query5 AS
+    SELECT 
+        startingAirport,
+        destinationAirport,
+        isNonStop,
+        COUNT(*) as num_flights,
+        ROUND(AVG(totalFare), 2) as avg_fare,
+        ROUND(MIN(totalFare), 2) as min_fare,
+        ROUND(MAX(totalFare), 2) as max_fare
+    FROM main
+    GROUP BY startingAirport, destinationAirport, isNonStop
+    ORDER BY startingAirport, destinationAirport, isNonStop DESC;
+""")
+'''
+
 print("query 5 finished")
 
 try:
