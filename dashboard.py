@@ -112,38 +112,94 @@ def data_sample():
         st.subheader("Airports Map")
         st.map(df_airports[['lat', 'lon']])
 
+
 def first_query():
     st.title("✈️ Flight Price and Search Analysis Dashboard")
 
     conn = sqlite3.connect("database.sqlite")
-    # Load the 'sample' table into a pandas DataFrame
     query = "SELECT * FROM query1"
     df = pd.read_sql_query(query, conn)
     conn.close()
 
-    # Price vs Days Before Flight
-    st.subheader("🎟️ Ticket Price vs. Days Before Flight")
-    fig1, ax1 = plt.subplots(figsize=(10, 6))
-    sns.lineplot(data=df, x='days_before_flight', y='avg_fare', alpha=0.3, ax=ax1)
-    ax1.set_title('Ticket Price vs. Days Before Flight')
+    st.subheader("🎟️ Price and Search Volume Analysis")
+
+    # Create figure with two Y axes
+    fig, ax1 = plt.subplots(figsize=(12, 6))
+
+    # First Y axis - Average Fare
+    color1 = '#1f77b4'  # Blue
+    sns.lineplot(data=df, x='days_before_flight', y='avg_fare', ax=ax1, color=color1, label='Average Fare')
     ax1.set_xlabel('Days Before Flight')
-    ax1.set_ylabel('Average Fare (USD)')
+    ax1.set_ylabel('Average Fare (USD)', color=color1)
+    ax1.tick_params(axis='y', labelcolor=color1)
     ax1.invert_xaxis()
-    st.pyplot(fig1)
 
-    # Searches Over Time
-    st.subheader("📊 Number of Searches Over Time")
-    # Aggregate searches per day
+    # Second Y axis - Number of Searches
+    ax2 = ax1.twinx()
+    color2 = '#ff7f0e'  # Orange
     search_counts = df.groupby('days_before_flight')['number_of_searches'].sum().reset_index()
-    fig2, ax2 = plt.subplots(figsize=(10, 6))
-    sns.lineplot(data=search_counts, x='days_before_flight', y='number_of_searches', ax=ax2)
-    ax2.set_title('Number of Searches Over Time')
-    ax2.set_xlabel('Days Before Flight')
-    ax2.set_ylabel('Number of Searches')
-    ax2.invert_xaxis()
-    st.pyplot(fig2)
+    sns.lineplot(data=search_counts, x='days_before_flight', y='number_of_searches', ax=ax2, color=color2,
+                 label='Number of Searches')
+    ax2.set_ylabel('Number of Searches', color=color2)
+    ax2.tick_params(axis='y', labelcolor=color2)
 
-    # _________________________________________________________________________________________________________
+    # Title and layout adjustments
+    plt.title('Price and Search Volume vs Days Before Flight')
+
+    # Combine legends
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper right')
+    ax2.get_legend().remove()  # Remove second legend
+
+    # Adjust layout to prevent label cutoff
+    plt.tight_layout()
+
+    st.pyplot(fig)
+
+    # Add insights section
+    st.subheader("📈 Key Insights")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.write("**Price Trends**")
+        # Calculate price statistics
+        max_price = df['avg_fare'].max()
+        min_price = df['avg_fare'].min()
+        avg_price = df['avg_fare'].mean()
+        price_peak_day = df.loc[df['avg_fare'].idxmax(), 'days_before_flight']
+        price_lowest_day = df.loc[df['avg_fare'].idxmin(), 'days_before_flight']
+
+        st.write(f"• Highest average fare: ${max_price:.2f} ({price_peak_day} days before flight)")
+        st.write(f"• Lowest average fare: ${min_price:.2f} ({price_lowest_day} days before flight)")
+        st.write(f"• Overall average fare: ${avg_price:.2f}")
+
+    with col2:
+        st.write("**Search Volume Trends**")
+        # Calculate search statistics
+        max_searches = search_counts['number_of_searches'].max()
+        min_searches = search_counts['number_of_searches'].min()
+        avg_searches = search_counts['number_of_searches'].mean()
+        search_peak_day = search_counts.loc[search_counts['number_of_searches'].idxmax(), 'days_before_flight']
+        search_lowest_day = search_counts.loc[search_counts['number_of_searches'].idxmin(), 'days_before_flight']
+
+        st.write(f"• Peak searches: {int(max_searches):,} ({search_peak_day} days before flight)")
+        st.write(f"• Lowest searches: {int(min_searches):,} ({search_lowest_day} days before flight)")
+        st.write(f"• Average daily searches: {int(avg_searches):,}")
+
+    st.write("**🔍 Analysis Summary**")
+    correlations = np.corrcoef(df['avg_fare'], search_counts['number_of_searches'])[0, 1]
+
+    summary_points = [
+        f"• The correlation between price and search volume is {correlations:.2f}",
+        f"• Prices tend to {'increase' if correlations > 0 else 'decrease'} as search volume {'increases' if correlations > 0 else 'decreases'}",
+        f"• The most active search period is around {search_peak_day} days before flight",
+        f"• The best time to book (lowest prices) appears to be {price_lowest_day} days before flight"
+    ]
+
+    for point in summary_points:
+        st.write(point)
 
 def second_query():
     st.subheader("✈️ Flight Analysis by Distance Category")
