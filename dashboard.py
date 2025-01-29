@@ -42,27 +42,27 @@ The queries provide clear insights into how and when prices change and what driv
   - Non-stop vs. connecting flights
 - View major US airports on an interactive map
 
-### Price Trends Analysis
+### Price analysis and searches
 - Analyze how ticket prices change based on booking timing
 - View search volume patterns over time
 - Interactive visualization of pricing trends
 
-### Distance Category Analysis
+### Analysis by distance category
 - Compare fares across different flight distances
 - Analyze direct vs. connecting flight pricing
 - Filter and customize view based on flight types
 
-### Time-of-Day Analysis
+### Analysis by departure time
 - Examine how departure times affect pricing
 - View seat availability patterns throughout the day
 - Track flight frequency by hour
 
-### Day of Week Patterns
+### Analysis by day of the week
 - Compare prices across different days of the week
 - Analyze fare variations for different flight types
 - Interactive filters for custom analysis
 
-### Route Analysis
+### Flight path analysis
 - Interactive 3D visualization of flight routes
 - Color-coded pricing information
 - Customizable views with multiple layers
@@ -90,7 +90,6 @@ Discover patterns in:
 - Booking patterns
 
 Start exploring the dashboard using the navigation menu on the left to access different analyses and insights!
-
     """
     )
 
@@ -835,7 +834,7 @@ def fifth_query():
 
 page_names_to_funcs = {
     "main page": mainPage,
-    "data sample": data_sample,
+    "data sample view": data_sample,
     "Price analysis and searches": first_query,
     "Analysis by distance category": second_query,
     "Analysis by departure time": third_query,
