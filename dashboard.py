@@ -1,11 +1,13 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
-from pygments import highlight
 import matplotlib.pyplot as plt
 import seaborn as sns
-import folium
-from streamlit_folium import st_folium
+import pydeck as pdk
+import numpy as np
+
+#import plotly.express as px
+#import plotly.graph_objects as go
 
 
 sqlite_conn = sqlite3.connect("database.sqlite")
@@ -382,63 +384,212 @@ def fourth_query():
                 st.write(f"- Lowest: ${query4_data['avg_connection_fare'].min():.2f}")
 
 def fifth_query():
-    st.subheader("📊 Significant Price Changes Analysis")
+    st.subheader("🛫 Flight Routes Analysis")
 
+    # Load and prepare data
     conn = sqlite3.connect("database.sqlite")
     query = "SELECT * FROM query5"
     query5_data = pd.read_sql_query(query, conn)
     conn.close()
 
-    fig1, ax1 = plt.subplots(figsize=(12, 6))
+    query5_data = query5_data.dropna(subset=['avg_fare', 'num_flights'])
 
-    colors = ['red' if x > 0 else 'blue' for x in query5_data['daily_change_percent']]
-
-    scatter = ax1.scatter(range(len(query5_data)),
-                          query5_data['daily_change_percent'],
-                          c=colors,
-                          alpha=0.6)
-
-    ax1.axhline(y=0, color='black', linestyle='-', alpha=0.2)
-    ax1.axhline(y=20, color='red', linestyle='--', alpha=0.2)
-    ax1.axhline(y=-20, color='blue', linestyle='--', alpha=0.2)
-
-    ax1.set_ylabel('Price Change (%)')
-    ax1.set_title('Significant Daily Price Changes (>20%)')
-    ax1.grid(True, alpha=0.3)
-
-    legend_elements = [plt.Line2D([0], [0], marker='o', color='w',
-                                  markerfacecolor='red', label='Price Increase', markersize=10),
-                       plt.Line2D([0], [0], marker='o', color='w',
-                                  markerfacecolor='blue', label='Price Decrease', markersize=10)]
-
-    ax1.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1, 1))
-
-    plt.tight_layout()
-    st.pyplot(fig1)
-
-    st.subheader("🔍 Detailed Statistics")
-    col1, col2 = st.columns(2)
+    # Controls
+    col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.write("Price Increases:")
-        increases = query5_data[query5_data['daily_change_percent'] > 0]
-        st.write(f"- Count: {len(increases)}")
-        st.write(f"- Max Increase: {increases['daily_change_percent'].max():.1f}%")
-        st.write(f"- Avg Increase: {increases['daily_change_percent'].mean():.1f}%")
+        flight_type = st.selectbox(
+            "Flight Type",
+            options=['All Flights', 'Non-Stop Only', 'Connecting Flights Only']
+        )
 
     with col2:
-        st.write("Price Decreases:")
-        decreases = query5_data[query5_data['daily_change_percent'] < 0]
-        st.write(f"- Count: {len(decreases)}")
-        st.write(f"- Max Decrease: {decreases['daily_change_percent'].min():.1f}%")
-        st.write(f"- Avg Decrease: {decreases['daily_change_percent'].mean():.1f}%")
+        selected_origins = st.multiselect(
+            "Select Origin Airports",
+            options=sorted(query5_data['startingAirport'].unique()),
+            default=[]
+        )
 
-    st.subheader("📈 Routes with Most Volatile Prices")
-    volatile_routes = query5_data.groupby(['startingAirport', 'destinationAirport']).size() \
-        .sort_values(ascending=False).head(5)
+    with col3:
+        selected_destinations = st.multiselect(
+            "Select Destination Airports",
+            options=sorted(query5_data['destinationAirport'].unique()),
+            default=[]
+        )
 
-    for (start, dest), count in volatile_routes.items():
-        st.write(f"- {start} ➡️ {dest}: {count} significant changes")
+    # Filter and aggregate data
+    filtered_data = query5_data.copy()
+
+    if flight_type == 'All Flights':
+        filtered_data = filtered_data.groupby(
+            ['startingAirport', 'destinationAirport', 'start_lat', 'start_lon', 'dest_lat', 'dest_lon']
+        ).agg({
+            'num_flights': 'sum',
+            'avg_fare': lambda x: np.average(x, weights=filtered_data.loc[x.index, 'num_flights']),
+            'min_fare': 'min',
+            'max_fare': 'max'
+        }).reset_index()
+    elif flight_type == 'Non-Stop Only':
+        filtered_data = filtered_data[filtered_data['isNonStop'] == True]
+    elif flight_type == 'Connecting Flights Only':
+        filtered_data = filtered_data[filtered_data['isNonStop'] == False]
+
+    if selected_origins:
+        filtered_data = filtered_data[filtered_data['startingAirport'].isin(selected_origins)]
+    if selected_destinations:
+        filtered_data = filtered_data[filtered_data['destinationAirport'].isin(selected_destinations)]
+
+    if len(filtered_data) > 0:
+        max_flights = filtered_data['num_flights'].max()
+        min_price = filtered_data['avg_fare'].min()
+        max_price = filtered_data['avg_fare'].max()
+        price_range = max_price - min_price
+
+        # Prepare route data with color and width calculations
+        route_data = []
+        for _, flight in filtered_data.iterrows():
+            try:
+                # Normalize price for color
+                if price_range > 0:
+                    normalized_price = (flight['avg_fare'] - min_price) / price_range
+                else:
+                    normalized_price = 0.5
+
+                # Calculate RGB color (blue for low prices, red for high prices)
+                red = int(255 * normalized_price)
+                blue = int(255 * (1 - normalized_price))
+
+                # Calculate line width based on number of flights
+                width = 1 + (flight['num_flights'] / max_flights) * 10
+
+                # Format numbers for tooltip
+                avg_fare = round(float(flight['avg_fare']), 2)
+                min_fare = round(float(flight['min_fare']), 2)
+                max_fare = round(float(flight['max_fare']), 2)
+                num_flights = int(flight['num_flights'])
+
+                route_data.append({
+                    'sourcePosition': [flight['start_lon'], flight['start_lat']],
+                    'targetPosition': [flight['dest_lon'], flight['dest_lat']],
+                    'color': [red, 0, blue],
+                    'width': width,
+                    'startingAirport': flight['startingAirport'],
+                    'destinationAirport': flight['destinationAirport'],
+                    'num_flights': num_flights,
+                    'avg_fare': avg_fare,
+                    'min_fare': min_fare,
+                    'max_fare': max_fare,
+                    # Add formatted strings for tooltip
+                    'avg_fare_display': f"${avg_fare:.2f}",
+                    'price_range_display': f"${min_fare:.2f} - ${max_fare:.2f}"
+                })
+            except (ValueError, TypeError):
+                continue
+
+        # Define layers
+        ALL_LAYERS = {
+            "Flight Routes": pdk.Layer(
+                "ArcLayer",
+                data=route_data,
+                get_source_position='sourcePosition',
+                get_target_position='targetPosition',
+                get_width='width',
+                get_source_color='color',
+                get_target_color='color',
+                pickable=True,
+            ),
+            "Airport Locations": pdk.Layer(
+                "ScatterplotLayer",
+                data=pd.concat([
+                    filtered_data[['start_lat', 'start_lon', 'startingAirport']].rename(
+                        columns={'startingAirport': 'name', 'start_lat': 'lat', 'start_lon': 'lon'}),
+                    filtered_data[['dest_lat', 'dest_lon', 'destinationAirport']].rename(
+                        columns={'destinationAirport': 'name', 'dest_lat': 'lat', 'dest_lon': 'lon'})
+                ]).drop_duplicates(),
+                get_position=["lon", "lat"],
+                get_color=[0, 0, 0, 200],
+                get_radius=5000,
+                pickable=True,
+            ),
+            "Airport Names": pdk.Layer(
+                "TextLayer",
+                data=pd.concat([
+                    filtered_data[['start_lat', 'start_lon', 'startingAirport']].rename(
+                        columns={'startingAirport': 'name', 'start_lat': 'lat', 'start_lon': 'lon'}),
+                    filtered_data[['dest_lat', 'dest_lon', 'destinationAirport']].rename(
+                        columns={'destinationAirport': 'name', 'dest_lat': 'lat', 'dest_lon': 'lon'})
+                ]).drop_duplicates(),
+                get_position=["lon", "lat"],
+                get_text="name",
+                get_size=15,
+                get_color=[0, 0, 0, 200],
+                get_alignment_baseline="'bottom'",
+            )
+        }
+
+        # Layer selection
+        st.sidebar.markdown("### Map Layers")
+        selected_layers = [
+            layer
+            for layer_name, layer in ALL_LAYERS.items()
+            if st.sidebar.checkbox(layer_name, True)
+        ]
+
+        if selected_layers:
+            # Create the map
+            st.pydeck_chart(
+                pdk.Deck(
+                    map_style="mapbox://styles/mapbox/light-v9",
+                    initial_view_state=pdk.ViewState(
+                        latitude=39.8283,
+                        longitude=-98.5795,
+                        zoom=3,
+                        pitch=50,
+                    ),
+                    layers=selected_layers,
+                    tooltip={
+                        "html": "<b>{startingAirport} ✈ {destinationAirport}</b><br>"
+                                "Flights: {num_flights}<br>"
+                                "Average Fare: {avg_fare_display}<br>"
+                                "Price Range: {price_range_display}"
+                    }
+                )
+            )
+
+            # Legend
+            st.write("### Map Legend")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write("🔵 Lower fares")
+            with col2:
+                st.write("🔴 Higher fares")
+            st.write("*Line thickness indicates number of flights on the route*")
+
+        else:
+            st.error("Please choose at least one layer above.")
+
+        # Statistics
+        st.write("### Route Statistics")
+        stats_df = filtered_data[['startingAirport', 'destinationAirport',
+                                  'num_flights', 'avg_fare',
+                                  'min_fare', 'max_fare']]
+
+        st.dataframe(stats_df.style.format({
+            'avg_fare': '${:.2f}',
+            'min_fare': '${:.2f}',
+            'max_fare': '${:.2f}',
+            'num_flights': '{:,.0f}'
+        }))
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Routes", len(filtered_data))
+        with col2:
+            st.metric("Total Flights", f"{filtered_data['num_flights'].sum():,.0f}")
+        with col3:
+            st.metric("Average Fare", f"${filtered_data['avg_fare'].mean():.2f}")
+    else:
+        st.warning("No routes found for the selected filters.")
 
 
 page_names_to_funcs = {

@@ -1,6 +1,7 @@
-duckdb
-matplotlib
 streamlit
+duckdb
+pandas
+matplotlib
 seaborn
-folium
-streamlit_folium
+pydeck
+numpy

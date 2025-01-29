@@ -230,3 +230,5 @@ for i in range(1, 6):
 # duckdb_conn.execute("EXPORT DATABASE 'sqliteDB' (FORMAT SQLITE);")
 
 duckdb_conn.close()
+
+
