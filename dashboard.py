@@ -6,14 +6,7 @@ import seaborn as sns
 import pydeck as pdk
 import numpy as np
 
-#import plotly.express as px
-#import plotly.graph_objects as go
-
-
 sqlite_conn = sqlite3.connect("database.sqlite")
-
-# st.write("# Hi")
-
 
 def mainPage():
     st.write("# Welcome to Streamlit! 👋")
