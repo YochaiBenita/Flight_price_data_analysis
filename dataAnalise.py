@@ -182,9 +182,9 @@ duckdb_conn.execute("""
         a1.lon as start_lon,
         a2.lat as dest_lat,
         a2.lon as dest_lon
-    FROM flights f
-    JOIN airportsLocation a1 ON f.startingAirport = a1.code
-    JOIN airportsLocation a2 ON f.destinationAirport = a2.code
+    FROM main f
+    JOIN airportsLocation a1 ON f.startingAirport = a1.airport
+    JOIN airportsLocation a2 ON f.destinationAirport = a2.airport
     GROUP BY f.startingAirport, f.destinationAirport, f.isNonStop, 
              a1.lat, a1.lon, a2.lat, a2.lon
     ORDER BY f.startingAirport, f.destinationAirport, f.isNonStop DESC;
