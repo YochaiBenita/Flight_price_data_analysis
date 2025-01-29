@@ -112,8 +112,6 @@ def data_sample():
         st.subheader("Airports Map")
         st.map(df_airports[['lat', 'lon']])
 
-
-#seaborn and matplot
 def first_query():
     st.title("✈️ Flight Price and Search Analysis Dashboard")
 
@@ -146,7 +144,7 @@ def first_query():
     st.pyplot(fig2)
 
     # _________________________________________________________________________________________________________
-#seaborn and matplot
+
 def second_query():
     st.subheader("✈️ Flight Analysis by Distance Category")
 
@@ -221,7 +219,7 @@ def second_query():
                 st.write("Connection Flights:")
                 st.write(f"- Highest average fare: ${query2_data['connection_avg_fare'].max():.2f}")
                 st.write(f"- Total number of flights: {query2_data['connection_flights_count'].sum():,}")
-#matplot
+
 def third_query():
     st.subheader("🕒 Flight Analysis by Departure Hour")
 
@@ -304,7 +302,7 @@ def third_query():
                 st.write("Flight Volume:")
                 st.write(f"- Peak: {query3_data['number_of_flights'].max():,} flights")
                 st.write(f"- Low: {query3_data['number_of_flights'].min():,} flights")
-#matplot
+
 def fourth_query():
     st.subheader("📅 Flight Analysis by Day of Week")
 
@@ -588,11 +586,11 @@ def fifth_query():
 page_names_to_funcs = {
     "main page": mainPage,
     "data sample": data_sample,
-    "first query": first_query,
-    "second query": second_query,
-    "third query": third_query,
-    "fourth query": fourth_query,
-    "fifth query": fifth_query,
+    "Price analysis and searches": first_query,
+    "Analysis by distance category": second_query,
+    "Analysis by departure time": third_query,
+    "Analysis by day of the week": fourth_query,
+    "Flight path analysis": fifth_query,
 }
 
 dashboard = st.sidebar.selectbox("pages", page_names_to_funcs.keys())

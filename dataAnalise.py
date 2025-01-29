@@ -137,35 +137,6 @@ duckdb_conn.execute("""
    END
 """)
 print("query 4 finished")
-'''
-duckdb_conn.execute("""
-    CREATE TABLE query5 AS
-    WITH price_volatility AS (
-        SELECT 
-            startingAirport,
-            destinationAirport,
-            flightDate,
-            AVG(totalFare) as avg_fare,
-            LAG(AVG(totalFare)) OVER (
-                PARTITION BY startingAirport, destinationAirport
-                ORDER BY flightDate
-            ) as prev_day_fare
-        FROM main
-        GROUP BY startingAirport, destinationAirport, flightDate
-    )
-    SELECT 
-        flightDate,
-        startingAirport,
-        destinationAirport,
-        avg_fare,
-        prev_day_fare,
-        ((avg_fare - prev_day_fare) / prev_day_fare * 100) as daily_change_percent
-    FROM price_volatility
-    WHERE ((avg_fare - prev_day_fare) / prev_day_fare * 100) > 20
-        OR ((avg_fare - prev_day_fare) / prev_day_fare * 100) < -20
-    ORDER BY daily_change_percent DESC;
-""")
-'''
 
 # query 5
 duckdb_conn.execute("""
@@ -189,24 +160,6 @@ duckdb_conn.execute("""
              a1.lat, a1.lon, a2.lat, a2.lon
     ORDER BY f.startingAirport, f.destinationAirport, f.isNonStop DESC;
 """)
-
-'''
-duckdb_conn.execute("""
-    CREATE TABLE query5 AS
-    SELECT 
-        startingAirport,
-        destinationAirport,
-        isNonStop,
-        COUNT(*) as num_flights,
-        ROUND(AVG(totalFare), 2) as avg_fare,
-        ROUND(MIN(totalFare), 2) as min_fare,
-        ROUND(MAX(totalFare), 2) as max_fare
-    FROM main
-    GROUP BY startingAirport, destinationAirport, isNonStop
-    ORDER BY startingAirport, destinationAirport, isNonStop DESC;
-""")
-'''
-
 print("query 5 finished")
 
 try:
